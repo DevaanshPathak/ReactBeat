@@ -48,6 +48,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Initial visual style.",
     )
     parser.add_argument(
+        "--mode",
+        choices=("particles", "fluid"),
+        default="particles",
+        help="Initial simulation mode.",
+    )
+    parser.add_argument(
         "--width",
         type=int,
         default=48,
@@ -70,6 +76,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             width_cells=max(args.width, 4),
             height_cells=max(args.height, 2),
             style_name=args.style,
+            mode=args.mode,
         )
         write_unicode_line(frame.plain)
         return 0
@@ -84,7 +91,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             sys.stderr.write(f"reactbeat: {exc}\n")
             return 2
 
-    ReactBeatApp(audio=audio, player=player, initial_style=args.style).run()
+    ReactBeatApp(
+        audio=audio,
+        player=player,
+        initial_style=args.style,
+        initial_mode=args.mode,
+    ).run()
     return 0
 
 

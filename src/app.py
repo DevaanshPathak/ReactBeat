@@ -20,6 +20,7 @@ from .render.styles import (
     cell_styles_from_intensity,
     style_by_name,
 )
+from .sim.fluid import FluidSimulation
 from .sim.particles import AudioFeatures, ParticleSystem
 
 
@@ -46,6 +47,7 @@ class SimulationWidget(Widget):
         audio: AudioData | None = None,
         player: AudioPlayer | None = None,
         initial_style: str = DEFAULT_STYLE.name,
+        initial_mode: str = "particles",
         seed: int = 4,
         max_particles: int = 5000,
     ) -> None:
@@ -59,6 +61,8 @@ class SimulationWidget(Widget):
         )
         self.style = style_by_name(initial_style)
         self.system = ParticleSystem(max_particles=max_particles, seed=seed)
+        self.fluid = FluidSimulation(iterations=7)
+        self.mode = _validate_mode(initial_mode)
         self.paused = False
         self._started_at = monotonic()
         self._last_tick = self._started_at
@@ -72,18 +76,20 @@ class SimulationWidget(Widget):
         now = monotonic()
         dt = min(max(now - self._last_tick, 0.0), 1.0 / 12.0)
         self._last_tick = now
+        width_cells = max(self.size.width, 20)
+        height_cells = max(self.size.height, 8)
+        pixel_width = width_cells * 2
+        pixel_height = height_cells * 4
 
         if not self.paused:
             features = self.style.shape_features(self._features_for_frame(now, dt))
-            self.system.step(dt, features)
+            if self.mode == "particles":
+                self.system.step(dt, features)
+            else:
+                self.fluid.ensure_size(pixel_width, pixel_height)
+                self.fluid.step(dt, features)
 
-        width_cells = max(self.size.width, 20)
-        height_cells = max(self.size.height, 8)
-        canvas, intensity = self.system.rasterize(
-            width=width_cells * 2,
-            height=height_cells * 4,
-            threshold=self.style.threshold,
-        )
+        canvas, intensity = self._rasterize(pixel_width, pixel_height)
         styles = cell_styles_from_intensity(intensity, self.style.palette)
         self._frame = braille_canvas_to_text(canvas, styles)
         self.refresh()
@@ -99,6 +105,10 @@ class SimulationWidget(Widget):
         self.style = VISUAL_STYLES[(current_index + 1) % len(VISUAL_STYLES)]
         return self.style
 
+    def cycle_mode(self) -> str:
+        self.mode = "fluid" if self.mode == "particles" else "particles"
+        return self.mode
+
     def _playback_elapsed(self, fallback_now: float) -> float:
         if self.audio is None or self.player is None:
             return fallback_now - self._started_at
@@ -109,6 +119,19 @@ class SimulationWidget(Widget):
             return self.analyzer.analyze_at(self.player.position_samples).to_audio_features()
         elapsed = self._playback_elapsed(now)
         return self._phase_one_features(elapsed, dt)
+
+    def _rasterize(self, pixel_width: int, pixel_height: int) -> tuple[object, object]:
+        if self.mode == "particles":
+            return self.system.rasterize(
+                width=pixel_width,
+                height=pixel_height,
+                threshold=self.style.threshold,
+            )
+        return self.fluid.rasterize(
+            width=pixel_width,
+            height=pixel_height,
+            threshold=max(0.045, self.style.threshold * 0.72),
+        )
 
     @staticmethod
     def _phase_one_features(elapsed: float, dt: float) -> AudioFeatures:
@@ -142,6 +165,7 @@ class ReactBeatApp(App[None]):
         Binding("q", "quit", "Quit"),
         Binding("space", "toggle_pause", "Pause"),
         Binding("s", "cycle_style", "Style"),
+        Binding("m", "cycle_mode", "Mode"),
     ]
 
     TITLE = "reactbeat"
@@ -153,11 +177,13 @@ class ReactBeatApp(App[None]):
         audio: AudioData | None = None,
         player: AudioPlayer | None = None,
         initial_style: str = DEFAULT_STYLE.name,
+        initial_mode: str = "particles",
     ) -> None:
         super().__init__()
         self.audio = audio
         self.player = player
         self.initial_style = initial_style
+        self.initial_mode = _validate_mode(initial_mode)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -165,6 +191,7 @@ class ReactBeatApp(App[None]):
             audio=self.audio,
             player=self.player,
             initial_style=self.initial_style,
+            initial_mode=self.initial_mode,
         )
         yield self.simulation
         yield Footer()
@@ -188,6 +215,10 @@ class ReactBeatApp(App[None]):
         style = self.simulation.cycle_style()
         self.notify(f"Style: {style.name}", timeout=1.4)
 
+    def action_cycle_mode(self) -> None:
+        mode = self.simulation.cycle_mode()
+        self.notify(f"Mode: {mode}", timeout=1.4)
+
     def on_unmount(self) -> None:
         if self.player is not None:
             self.player.close()
@@ -198,29 +229,60 @@ def render_smoke_frame(
     height_cells: int = 16,
     *,
     style_name: str = DEFAULT_STYLE.name,
+    mode: str = "particles",
 ) -> Text:
     """Render one deterministic frame without starting Textual."""
 
     style = style_by_name(style_name)
-    system = ParticleSystem(max_particles=1800, seed=12)
-    for frame in range(36):
-        phase = frame / 12.0
-        system.step(
-            1.0 / TARGET_FPS,
-            style.shape_features(
-                AudioFeatures(
-                    bass=0.35 + 0.60 * (frame % 12 == 0),
-                    broadband=0.45 + 0.20 * sin(phase),
-                    onset=frame % 12 == 0,
-                    intensity=0.75 if frame % 12 == 0 else 0.35,
-                )
-            ),
+    mode = _validate_mode(mode)
+    pixel_width = width_cells * 2
+    pixel_height = height_cells * 4
+    if mode == "particles":
+        system = ParticleSystem(max_particles=1800, seed=12)
+        for frame in range(36):
+            phase = frame / 12.0
+            system.step(
+                1.0 / TARGET_FPS,
+                style.shape_features(
+                    AudioFeatures(
+                        bass=0.35 + 0.60 * (frame % 12 == 0),
+                        broadband=0.45 + 0.20 * sin(phase),
+                        onset=frame % 12 == 0,
+                        intensity=0.75 if frame % 12 == 0 else 0.35,
+                    )
+                ),
+            )
+        canvas, intensity = system.rasterize(
+            pixel_width,
+            pixel_height,
+            threshold=style.threshold,
         )
-
-    canvas, intensity = system.rasterize(
-        width_cells * 2,
-        height_cells * 4,
-        threshold=style.threshold,
-    )
+    else:
+        fluid = FluidSimulation(pixel_width, pixel_height, iterations=7)
+        for frame in range(42):
+            phase = frame / 12.0
+            fluid.step(
+                1.0 / TARGET_FPS,
+                style.shape_features(
+                    AudioFeatures(
+                        bass=0.32 + 0.58 * (frame % 14 == 0),
+                        broadband=0.45 + 0.20 * sin(phase),
+                        onset=frame % 14 == 0,
+                        intensity=0.70 if frame % 14 == 0 else 0.36,
+                    )
+                ),
+            )
+        canvas, intensity = fluid.rasterize(
+            pixel_width,
+            pixel_height,
+            threshold=max(0.045, style.threshold * 0.72),
+        )
     styles = cell_styles_from_intensity(intensity, style.palette)
     return braille_canvas_to_text(canvas, styles)
+
+
+def _validate_mode(mode: str) -> str:
+    normalized = mode.strip().lower()
+    if normalized not in {"particles", "fluid"}:
+        raise ValueError("mode must be 'particles' or 'fluid'")
+    return normalized

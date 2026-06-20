@@ -66,12 +66,14 @@ Phase 4 note: `ember`, `aurora`, and `voltage` styles define palettes plus featu
 
 Goal: add a second physics mode using a coarse Stable Fluids solver.
 
-- [ ] Implement density and velocity grids.
-- [ ] Implement diffuse, advect, and project steps.
-- [ ] Add audio-reactive source injection.
-- [ ] Add mode switch keybinding.
-- [ ] Verify acceptable frame timing.
-- [ ] Commit Phase 5 if completed.
+- [x] Implement density and velocity grids.
+- [x] Implement diffuse, advect, and project steps.
+- [x] Add audio-reactive source injection.
+- [x] Add mode switch keybinding.
+- [x] Verify acceptable frame timing.
+- [x] Commit Phase 5 if completed.
+
+Phase 5 note: fluid mode uses a coarse density/velocity grid with diffuse, advect, and projection steps. Audio features inject density plus swirl/radial velocity, `--mode fluid` starts there, and `m` toggles between particles and fluid in the running app.
 
 ## Phase 6: Packaging and Validation
 

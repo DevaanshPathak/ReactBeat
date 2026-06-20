@@ -14,6 +14,7 @@ from src.audio.player import AudioPlayer
 from src.app import ReactBeatApp
 from src.render.braille import pack_braille
 from src.render.styles import VISUAL_STYLES, style_by_name
+from src.sim.fluid import FluidSimulation
 from src.sim.particles import AudioFeatures, ParticleSystem
 
 
@@ -148,6 +149,22 @@ class VisualStyleTests(unittest.TestCase):
         self.assertGreaterEqual(shaped.intensity, features.intensity)
 
 
+class FluidSimulationTests(unittest.TestCase):
+    def test_fluid_step_and_rasterize_produce_visible_density(self) -> None:
+        fluid = FluidSimulation(48, 32, iterations=4)
+        for _ in range(3):
+            fluid.step(
+                1 / 30,
+                AudioFeatures(bass=0.9, broadband=0.7, onset=True, intensity=0.9),
+            )
+
+        canvas, intensity = fluid.rasterize(48, 32)
+        self.assertEqual(canvas.shape, (32, 48))
+        self.assertEqual(intensity.shape, (32, 48))
+        self.assertGreater(float(intensity.max()), 0.0)
+        self.assertGreater(int(canvas.sum()), 0)
+
+
 class AppSmokeTests(unittest.IsolatedAsyncioTestCase):
     async def test_textual_app_mounts_headlessly(self) -> None:
         app = ReactBeatApp()
@@ -162,6 +179,14 @@ class AppSmokeTests(unittest.IsolatedAsyncioTestCase):
             await pilot.press("s")
             after = app.simulation.style.name
             self.assertNotEqual(before, after)
+
+    async def test_mode_can_cycle_without_restarting_app(self) -> None:
+        app = ReactBeatApp()
+        async with app.run_test(size=(60, 20)) as pilot:
+            before = app.simulation.mode
+            await pilot.press("m")
+            after = app.simulation.mode
+            self.assertEqual((before, after), ("particles", "fluid"))
 
 
 if __name__ == "__main__":
