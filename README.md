@@ -6,7 +6,7 @@ This project is being built for Hack Club TerminalCraft YSWS with a strict self-
 
 ## Current Status
 
-The project is implemented in phases. See [ROADMAP.md](ROADMAP.md) for the active phase checklist.
+Phase 2 is complete. The app runs the particle/braille renderer without audio, and it can decode WAV/FLAC/OGG files with `soundfile`, play them with callback-driven `sounddevice`, and use live playback sample position as the simulation clock. See [ROADMAP.md](ROADMAP.md) for the active phase checklist.
 
 ## Planned Features
 
@@ -56,7 +56,7 @@ During development:
 python -m src.cli path/to/audio.wav
 ```
 
-Phase 1 also supports running without audio to verify the simulation and braille renderer:
+Running without audio remains supported for development:
 
 ```bash
 python -m src.cli

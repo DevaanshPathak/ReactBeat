@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from types import SimpleNamespace
+from unittest.mock import patch
 
 import numpy as np
 
+from src.audio.loader import AudioData, load_audio_file
+from src.audio.player import AudioPlayer
 from src.app import ReactBeatApp
 from src.render.braille import pack_braille
 from src.sim.particles import AudioFeatures, ParticleSystem
@@ -48,6 +54,43 @@ class ParticleSystemTests(unittest.TestCase):
         self.assertEqual(canvas.shape, (32, 80))
         self.assertEqual(intensity.shape, (32, 80))
         self.assertGreater(int(canvas.sum()), 0)
+
+
+class AudioLoaderTests(unittest.TestCase):
+    def test_loader_downmixes_to_mono_float32(self) -> None:
+        stereo = np.array([[0.5, -0.5], [1.0, 0.0]], dtype=np.float32)
+        fake_soundfile = SimpleNamespace(read=lambda *args, **kwargs: (stereo, 48_000))
+
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "tone.wav"
+            path.write_bytes(b"fake")
+            with patch.dict("sys.modules", {"soundfile": fake_soundfile}):
+                audio = load_audio_file(path)
+
+        self.assertEqual(audio.sample_rate, 48_000)
+        self.assertEqual(audio.samples.dtype, np.float32)
+        np.testing.assert_allclose(audio.mono, np.array([0.0, 0.5], dtype=np.float32))
+
+
+class AudioPlayerTests(unittest.TestCase):
+    def test_callback_tracks_position_and_fills_output(self) -> None:
+        samples = np.array(
+            [[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]],
+            dtype=np.float32,
+        )
+        audio = AudioData(
+            path=Path("tone.wav"),
+            samples=samples,
+            mono=samples.mean(axis=1),
+            sample_rate=44_100,
+        )
+        player = AudioPlayer(audio)
+        out = np.zeros((2, 2), dtype=np.float32)
+
+        player._callback(out, 2, None, None)
+
+        self.assertEqual(player.position_samples, 2)
+        np.testing.assert_allclose(out, samples[:2])
 
 
 class AppSmokeTests(unittest.IsolatedAsyncioTestCase):

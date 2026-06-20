@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
+from .audio.loader import AudioLoadError, load_audio_file
+from .audio.player import AudioPlayer
 from .app import ReactBeatApp, render_smoke_frame
 
 
@@ -31,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
         "audiofile",
         nargs="?",
         type=Path,
-        help="Optional audio file. Audio playback is implemented in Phase 2.",
+        help="Optional WAV, FLAC, or OGG file to play and visualize.",
     )
     parser.add_argument(
         "--smoke-test",
@@ -64,7 +66,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_unicode_line(frame.plain)
         return 0
 
-    ReactBeatApp().run()
+    audio = None
+    player = None
+    if args.audiofile is not None:
+        try:
+            audio = load_audio_file(args.audiofile)
+            player = AudioPlayer(audio)
+        except AudioLoadError as exc:
+            sys.stderr.write(f"reactbeat: {exc}\n")
+            return 2
+
+    ReactBeatApp(audio=audio, player=player).run()
     return 0
 
 

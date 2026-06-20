@@ -22,18 +22,20 @@ Goal: prove the rendering pipeline end to end without audio.
 - [x] Verify `python -m src.cli` runs.
 - [x] Commit Phase 1.
 
-Phase 1 note: `python -m src.cli` launches the Textual particle renderer, and `python -m src.cli --smoke-test` renders one deterministic braille frame for non-interactive verification. Audio arguments are parsed but intentionally unused until Phase 2.
+Phase 1 note: `python -m src.cli` launches the Textual particle renderer, and `python -m src.cli --smoke-test` renders one deterministic braille frame for non-interactive verification.
 
 ## Phase 2: Audio Decode and Playback Sync
 
 Goal: load a local audio file, play it, and expose playback sample position to the render loop.
 
-- [ ] Implement `audio.loader`.
-- [ ] Implement callback-driven `audio.player`.
-- [ ] Wire CLI audio path into app.
-- [ ] Display or use live playback position in the widget.
-- [ ] Verify `python -m src.cli <audiofile>` runs.
-- [ ] Commit Phase 2.
+- [x] Implement `audio.loader`.
+- [x] Implement callback-driven `audio.player`.
+- [x] Wire CLI audio path into app.
+- [x] Display or use live playback position in the widget.
+- [x] Verify `python -m src.cli <audiofile>` runs.
+- [x] Commit Phase 2.
+
+Phase 2 note: audio decode uses `soundfile` for WAV/FLAC/OGG and playback uses a `sounddevice.OutputStream` callback with thread-safe sample-position tracking. Local verification decoded and played a generated WAV through PortAudio until the tracked position reached the final frame.
 
 ## Phase 3: Beat and Energy Detection
 

@@ -9,6 +9,8 @@ from textual.binding import Binding
 from textual.widgets import Footer, Header
 from textual.widget import Widget
 
+from .audio.loader import AudioData
+from .audio.player import AudioPlaybackError, AudioPlayer
 from .render.braille import braille_canvas_to_text
 from .render.styles import DEFAULT_PALETTE, cell_styles_from_intensity
 from .sim.particles import AudioFeatures, ParticleSystem
@@ -31,8 +33,17 @@ class SimulationWidget(Widget):
 
     can_focus = True
 
-    def __init__(self, *, seed: int = 4, max_particles: int = 5000) -> None:
+    def __init__(
+        self,
+        *,
+        audio: AudioData | None = None,
+        player: AudioPlayer | None = None,
+        seed: int = 4,
+        max_particles: int = 5000,
+    ) -> None:
         super().__init__()
+        self.audio = audio
+        self.player = player
         self.system = ParticleSystem(max_particles=max_particles, seed=seed)
         self.paused = False
         self._started_at = monotonic()
@@ -49,7 +60,8 @@ class SimulationWidget(Widget):
         self._last_tick = now
 
         if not self.paused:
-            features = self._phase_one_features(now - self._started_at, dt)
+            elapsed = self._playback_elapsed(now)
+            features = self._phase_one_features(elapsed, dt)
             self.system.step(dt, features)
 
         width_cells = max(self.size.width, 20)
@@ -67,6 +79,11 @@ class SimulationWidget(Widget):
 
     def toggle_pause(self) -> None:
         self.paused = not self.paused
+
+    def _playback_elapsed(self, fallback_now: float) -> float:
+        if self.audio is None or self.player is None:
+            return fallback_now - self._started_at
+        return self.player.position_samples / self.audio.sample_rate
 
     @staticmethod
     def _phase_one_features(elapsed: float, dt: float) -> AudioFeatures:
@@ -102,16 +119,42 @@ class ReactBeatApp(App[None]):
     ]
 
     TITLE = "reactbeat"
-    SUB_TITLE = "Phase 1 particle renderer"
+    SUB_TITLE = "Phase 2 playback sync"
+
+    def __init__(
+        self,
+        *,
+        audio: AudioData | None = None,
+        player: AudioPlayer | None = None,
+    ) -> None:
+        super().__init__()
+        self.audio = audio
+        self.player = player
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        self.simulation = SimulationWidget()
+        self.simulation = SimulationWidget(audio=self.audio, player=self.player)
         yield self.simulation
         yield Footer()
 
+    def on_mount(self) -> None:
+        if self.player is not None:
+            try:
+                self.player.start()
+            except AudioPlaybackError as exc:
+                self.notify(str(exc), severity="error", timeout=8)
+                self.player.close()
+                self.player = None
+                self.simulation.player = None
+
     def action_toggle_pause(self) -> None:
         self.simulation.toggle_pause()
+        if self.player is not None:
+            self.player.toggle_pause()
+
+    def on_unmount(self) -> None:
+        if self.player is not None:
+            self.player.close()
 
 
 def render_smoke_frame(width_cells: int = 48, height_cells: int = 16) -> Text:
