@@ -41,12 +41,14 @@ Phase 2 note: audio decode uses `soundfile` for WAV/FLAC/OGG and playback uses a
 
 Goal: make particle motion react to live audio features.
 
-- [ ] Implement manual FFT energy analyzer.
-- [ ] Track bass and broadband energy with rolling adaptive thresholds.
-- [ ] Expose onset/beat flags per playback position.
-- [ ] Inject forces and particles from audio features.
-- [ ] Verify visible beat-reactive behavior.
-- [ ] Commit Phase 3.
+- [x] Implement manual FFT energy analyzer.
+- [x] Track bass and broadband energy with rolling adaptive thresholds.
+- [x] Expose onset/beat flags per playback position.
+- [x] Inject forces and particles from audio features.
+- [x] Verify visible beat-reactive behavior.
+- [x] Commit Phase 3.
+
+Phase 3 note: `EnergyAnalyzer` computes bass and broadband FFT energy around the current playback sample, compares each band to rolling local averages, suppresses repeated onsets within a short cooldown, and feeds `AudioFeatures` directly into the particle simulation.
 
 ## Phase 4: Switchable Visual Styles
 

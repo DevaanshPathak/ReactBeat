@@ -9,6 +9,7 @@ from textual.binding import Binding
 from textual.widgets import Footer, Header
 from textual.widget import Widget
 
+from .audio.analysis import EnergyAnalyzer
 from .audio.loader import AudioData
 from .audio.player import AudioPlaybackError, AudioPlayer
 from .render.braille import braille_canvas_to_text
@@ -44,6 +45,11 @@ class SimulationWidget(Widget):
         super().__init__()
         self.audio = audio
         self.player = player
+        self.analyzer = (
+            EnergyAnalyzer(audio.mono, audio.sample_rate)
+            if audio is not None
+            else None
+        )
         self.system = ParticleSystem(max_particles=max_particles, seed=seed)
         self.paused = False
         self._started_at = monotonic()
@@ -60,8 +66,7 @@ class SimulationWidget(Widget):
         self._last_tick = now
 
         if not self.paused:
-            elapsed = self._playback_elapsed(now)
-            features = self._phase_one_features(elapsed, dt)
+            features = self._features_for_frame(now, dt)
             self.system.step(dt, features)
 
         width_cells = max(self.size.width, 20)
@@ -84,6 +89,12 @@ class SimulationWidget(Widget):
         if self.audio is None or self.player is None:
             return fallback_now - self._started_at
         return self.player.position_samples / self.audio.sample_rate
+
+    def _features_for_frame(self, now: float, dt: float) -> AudioFeatures:
+        if self.analyzer is not None and self.player is not None:
+            return self.analyzer.analyze_at(self.player.position_samples).to_audio_features()
+        elapsed = self._playback_elapsed(now)
+        return self._phase_one_features(elapsed, dt)
 
     @staticmethod
     def _phase_one_features(elapsed: float, dt: float) -> AudioFeatures:

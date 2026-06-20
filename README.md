@@ -6,7 +6,7 @@ This project is being built for Hack Club TerminalCraft YSWS with a strict self-
 
 ## Current Status
 
-Phase 2 is complete. The app runs the particle/braille renderer without audio, and it can decode WAV/FLAC/OGG files with `soundfile`, play them with callback-driven `sounddevice`, and use live playback sample position as the simulation clock. See [ROADMAP.md](ROADMAP.md) for the active phase checklist.
+Phase 3 is complete. The app runs the particle/braille renderer without audio, decodes and plays WAV/FLAC/OGG files locally, tracks callback playback position, and uses a manual short-time FFT analyzer to drive particle energy and onset bursts. See [ROADMAP.md](ROADMAP.md) for the active phase checklist.
 
 ## Planned Features
 

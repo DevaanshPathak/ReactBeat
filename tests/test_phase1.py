@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import numpy as np
 
+from src.audio.analysis import EnergyAnalyzer
 from src.audio.loader import AudioData, load_audio_file
 from src.audio.player import AudioPlayer
 from src.app import ReactBeatApp
@@ -91,6 +92,44 @@ class AudioPlayerTests(unittest.TestCase):
 
         self.assertEqual(player.position_samples, 2)
         np.testing.assert_allclose(out, samples[:2])
+
+
+class EnergyAnalyzerTests(unittest.TestCase):
+    def test_detects_low_frequency_burst_onset(self) -> None:
+        sample_rate = 8_000
+        mono = np.zeros(sample_rate, dtype=np.float32)
+        start = int(0.35 * sample_rate)
+        burst_length = int(0.16 * sample_rate)
+        time = np.arange(burst_length, dtype=np.float32) / sample_rate
+        mono[start:start + burst_length] = 0.9 * np.sin(2 * np.pi * 90.0 * time)
+
+        analyzer = EnergyAnalyzer(
+            mono,
+            sample_rate,
+            window_size=512,
+            hop_size=128,
+            history_size=12,
+            onset_multiplier=1.45,
+        )
+        frames = [
+            analyzer.analyze_at(sample)
+            for sample in range(0, len(mono), analyzer.hop_size)
+        ]
+
+        self.assertTrue(any(frame.onset for frame in frames))
+        self.assertGreater(max(frame.bass for frame in frames), 0.5)
+
+    def test_repeated_hop_does_not_repeat_onset(self) -> None:
+        sample_rate = 8_000
+        mono = np.zeros(sample_rate, dtype=np.float32)
+        mono[3000:3600] = 1.0
+        analyzer = EnergyAnalyzer(mono, sample_rate, window_size=512, hop_size=128)
+
+        frame = analyzer.analyze_at(3200)
+        repeated = analyzer.analyze_at(3201)
+
+        self.assertEqual(frame.sample_index, 3200)
+        self.assertFalse(repeated.onset)
 
 
 class AppSmokeTests(unittest.IsolatedAsyncioTestCase):
