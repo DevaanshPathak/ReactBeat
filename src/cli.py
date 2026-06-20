@@ -8,6 +8,7 @@ from typing import Sequence
 from .audio.loader import AudioLoadError, load_audio_file
 from .audio.player import AudioPlayer
 from .app import ReactBeatApp, render_smoke_frame
+from .render.styles import style_names
 
 
 def write_unicode_line(value: str) -> None:
@@ -41,6 +42,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Render one deterministic braille frame and exit.",
     )
     parser.add_argument(
+        "--style",
+        choices=style_names(),
+        default=style_names()[0],
+        help="Initial visual style.",
+    )
+    parser.add_argument(
         "--width",
         type=int,
         default=48,
@@ -62,6 +69,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         frame = render_smoke_frame(
             width_cells=max(args.width, 4),
             height_cells=max(args.height, 2),
+            style_name=args.style,
         )
         write_unicode_line(frame.plain)
         return 0
@@ -76,7 +84,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             sys.stderr.write(f"reactbeat: {exc}\n")
             return 2
 
-    ReactBeatApp(audio=audio, player=player).run()
+    ReactBeatApp(audio=audio, player=player, initial_style=args.style).run()
     return 0
 
 

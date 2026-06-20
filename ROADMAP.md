@@ -54,11 +54,13 @@ Phase 3 note: `EnergyAnalyzer` computes bass and broadband FFT energy around the
 
 Goal: make the same simulation feel meaningfully different at runtime.
 
-- [ ] Implement style definitions in `render.styles`.
-- [ ] Add at least 3 styles.
-- [ ] Add keybinding to cycle styles during playback.
-- [ ] Keep styles decoupled from simulation state.
-- [ ] Commit Phase 4.
+- [x] Implement style definitions in `render.styles`.
+- [x] Add at least 3 styles.
+- [x] Add keybinding to cycle styles during playback.
+- [x] Keep styles decoupled from simulation state.
+- [x] Commit Phase 4.
+
+Phase 4 note: `ember`, `aurora`, and `voltage` styles define palettes plus feature gain and render-threshold behavior. `--style` selects the initial profile, and `s` cycles profiles in the running Textual app without touching playback state.
 
 ## Phase 5: Fluid Simulation Mode Stretch
 

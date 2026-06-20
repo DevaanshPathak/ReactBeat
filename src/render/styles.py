@@ -4,6 +4,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from ..sim.particles import AudioFeatures
+
 
 @dataclass(frozen=True)
 class Palette:
@@ -11,17 +13,95 @@ class Palette:
     levels: tuple[str, ...]
 
 
-DEFAULT_PALETTE = Palette(
-    name="ember",
-    levels=(
-        "#3b1d1d",
-        "#7f2f24",
-        "#c6552c",
-        "#f28c38",
-        "bold #ffd166",
-        "bold #fff6d5",
+@dataclass(frozen=True)
+class VisualStyle:
+    name: str
+    palette: Palette
+    bass_gain: float = 1.0
+    broadband_gain: float = 1.0
+    intensity_gain: float = 1.0
+    threshold: float = 0.11
+
+    def shape_features(self, features: AudioFeatures) -> AudioFeatures:
+        return AudioFeatures(
+            bass=float(np.clip(features.bass * self.bass_gain, 0.0, 1.0)),
+            broadband=float(np.clip(features.broadband * self.broadband_gain, 0.0, 1.0)),
+            onset=features.onset,
+            intensity=float(np.clip(features.intensity * self.intensity_gain, 0.0, 1.0)),
+        )
+
+
+VISUAL_STYLES = (
+    VisualStyle(
+        name="ember",
+        palette=Palette(
+            name="ember",
+            levels=(
+                "#301616",
+                "#7f2f24",
+                "#c6552c",
+                "#f28c38",
+                "bold #ffd166",
+                "bold #fff6d5",
+            ),
+        ),
+        bass_gain=1.08,
+        broadband_gain=0.96,
+        intensity_gain=1.06,
+        threshold=0.11,
+    ),
+    VisualStyle(
+        name="aurora",
+        palette=Palette(
+            name="aurora",
+            levels=(
+                "#08221e",
+                "#0f5c52",
+                "#1b9aaa",
+                "#6ee7b7",
+                "bold #b8f7d4",
+                "bold #f0fffb",
+            ),
+        ),
+        bass_gain=0.82,
+        broadband_gain=1.18,
+        intensity_gain=0.92,
+        threshold=0.085,
+    ),
+    VisualStyle(
+        name="voltage",
+        palette=Palette(
+            name="voltage",
+            levels=(
+                "#101018",
+                "#2c3e8f",
+                "#287bd1",
+                "#22d3ee",
+                "bold #e8ff4f",
+                "bold #ffffff",
+            ),
+        ),
+        bass_gain=1.34,
+        broadband_gain=1.12,
+        intensity_gain=1.25,
+        threshold=0.15,
     ),
 )
+
+DEFAULT_STYLE = VISUAL_STYLES[0]
+
+
+def style_names() -> tuple[str, ...]:
+    return tuple(style.name for style in VISUAL_STYLES)
+
+
+def style_by_name(name: str) -> VisualStyle:
+    normalized = name.strip().lower()
+    for style in VISUAL_STYLES:
+        if style.name == normalized:
+            return style
+    valid = ", ".join(style_names())
+    raise ValueError(f"unknown style {name!r}; valid styles: {valid}")
 
 
 def cell_styles_from_intensity(intensity: np.ndarray, palette: Palette) -> np.ndarray:

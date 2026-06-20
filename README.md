@@ -6,7 +6,7 @@ This project is being built for Hack Club TerminalCraft YSWS with a strict self-
 
 ## Current Status
 
-Phase 3 is complete. The app runs the particle/braille renderer without audio, decodes and plays WAV/FLAC/OGG files locally, tracks callback playback position, and uses a manual short-time FFT analyzer to drive particle energy and onset bursts. See [ROADMAP.md](ROADMAP.md) for the active phase checklist.
+Phase 4 is complete. The app runs the particle/braille renderer without audio, decodes and plays WAV/FLAC/OGG files locally, tracks callback playback position, uses a manual short-time FFT analyzer to drive particle energy and onset bursts, and supports runtime visual style switching. See [ROADMAP.md](ROADMAP.md) for the active phase checklist.
 
 ## Planned Features
 
@@ -56,6 +56,12 @@ During development:
 python -m src.cli path/to/audio.wav
 ```
 
+Choose an initial style:
+
+```bash
+python -m src.cli path/to/audio.wav --style aurora
+```
+
 Running without audio remains supported for development:
 
 ```bash
@@ -68,7 +74,7 @@ Controls will grow by phase. The intended baseline is:
 
 - `q`: quit
 - `space`: pause/resume simulation or playback
-- `s`: cycle render style
+- `s`: cycle render style (`ember`, `aurora`, `voltage`)
 - `m`: cycle simulation mode once fluid mode exists
 
 ## Packaging Goal

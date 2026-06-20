@@ -13,7 +13,13 @@ from .audio.analysis import EnergyAnalyzer
 from .audio.loader import AudioData
 from .audio.player import AudioPlaybackError, AudioPlayer
 from .render.braille import braille_canvas_to_text
-from .render.styles import DEFAULT_PALETTE, cell_styles_from_intensity
+from .render.styles import (
+    DEFAULT_STYLE,
+    VISUAL_STYLES,
+    VisualStyle,
+    cell_styles_from_intensity,
+    style_by_name,
+)
 from .sim.particles import AudioFeatures, ParticleSystem
 
 
@@ -39,6 +45,7 @@ class SimulationWidget(Widget):
         *,
         audio: AudioData | None = None,
         player: AudioPlayer | None = None,
+        initial_style: str = DEFAULT_STYLE.name,
         seed: int = 4,
         max_particles: int = 5000,
     ) -> None:
@@ -50,6 +57,7 @@ class SimulationWidget(Widget):
             if audio is not None
             else None
         )
+        self.style = style_by_name(initial_style)
         self.system = ParticleSystem(max_particles=max_particles, seed=seed)
         self.paused = False
         self._started_at = monotonic()
@@ -66,7 +74,7 @@ class SimulationWidget(Widget):
         self._last_tick = now
 
         if not self.paused:
-            features = self._features_for_frame(now, dt)
+            features = self.style.shape_features(self._features_for_frame(now, dt))
             self.system.step(dt, features)
 
         width_cells = max(self.size.width, 20)
@@ -74,8 +82,9 @@ class SimulationWidget(Widget):
         canvas, intensity = self.system.rasterize(
             width=width_cells * 2,
             height=height_cells * 4,
+            threshold=self.style.threshold,
         )
-        styles = cell_styles_from_intensity(intensity, DEFAULT_PALETTE)
+        styles = cell_styles_from_intensity(intensity, self.style.palette)
         self._frame = braille_canvas_to_text(canvas, styles)
         self.refresh()
 
@@ -84,6 +93,11 @@ class SimulationWidget(Widget):
 
     def toggle_pause(self) -> None:
         self.paused = not self.paused
+
+    def cycle_style(self) -> VisualStyle:
+        current_index = VISUAL_STYLES.index(self.style)
+        self.style = VISUAL_STYLES[(current_index + 1) % len(VISUAL_STYLES)]
+        return self.style
 
     def _playback_elapsed(self, fallback_now: float) -> float:
         if self.audio is None or self.player is None:
@@ -127,24 +141,31 @@ class ReactBeatApp(App[None]):
     BINDINGS = [
         Binding("q", "quit", "Quit"),
         Binding("space", "toggle_pause", "Pause"),
+        Binding("s", "cycle_style", "Style"),
     ]
 
     TITLE = "reactbeat"
-    SUB_TITLE = "Phase 2 playback sync"
+    SUB_TITLE = "Phase 4 visual styles"
 
     def __init__(
         self,
         *,
         audio: AudioData | None = None,
         player: AudioPlayer | None = None,
+        initial_style: str = DEFAULT_STYLE.name,
     ) -> None:
         super().__init__()
         self.audio = audio
         self.player = player
+        self.initial_style = initial_style
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        self.simulation = SimulationWidget(audio=self.audio, player=self.player)
+        self.simulation = SimulationWidget(
+            audio=self.audio,
+            player=self.player,
+            initial_style=self.initial_style,
+        )
         yield self.simulation
         yield Footer()
 
@@ -163,27 +184,43 @@ class ReactBeatApp(App[None]):
         if self.player is not None:
             self.player.toggle_pause()
 
+    def action_cycle_style(self) -> None:
+        style = self.simulation.cycle_style()
+        self.notify(f"Style: {style.name}", timeout=1.4)
+
     def on_unmount(self) -> None:
         if self.player is not None:
             self.player.close()
 
 
-def render_smoke_frame(width_cells: int = 48, height_cells: int = 16) -> Text:
+def render_smoke_frame(
+    width_cells: int = 48,
+    height_cells: int = 16,
+    *,
+    style_name: str = DEFAULT_STYLE.name,
+) -> Text:
     """Render one deterministic frame without starting Textual."""
 
+    style = style_by_name(style_name)
     system = ParticleSystem(max_particles=1800, seed=12)
     for frame in range(36):
         phase = frame / 12.0
         system.step(
             1.0 / TARGET_FPS,
-            AudioFeatures(
-                bass=0.35 + 0.60 * (frame % 12 == 0),
-                broadband=0.45 + 0.20 * sin(phase),
-                onset=frame % 12 == 0,
-                intensity=0.75 if frame % 12 == 0 else 0.35,
+            style.shape_features(
+                AudioFeatures(
+                    bass=0.35 + 0.60 * (frame % 12 == 0),
+                    broadband=0.45 + 0.20 * sin(phase),
+                    onset=frame % 12 == 0,
+                    intensity=0.75 if frame % 12 == 0 else 0.35,
+                )
             ),
         )
 
-    canvas, intensity = system.rasterize(width_cells * 2, height_cells * 4)
-    styles = cell_styles_from_intensity(intensity, DEFAULT_PALETTE)
+    canvas, intensity = system.rasterize(
+        width_cells * 2,
+        height_cells * 4,
+        threshold=style.threshold,
+    )
+    styles = cell_styles_from_intensity(intensity, style.palette)
     return braille_canvas_to_text(canvas, styles)

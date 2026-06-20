@@ -13,6 +13,7 @@ from src.audio.loader import AudioData, load_audio_file
 from src.audio.player import AudioPlayer
 from src.app import ReactBeatApp
 from src.render.braille import pack_braille
+from src.render.styles import VISUAL_STYLES, style_by_name
 from src.sim.particles import AudioFeatures, ParticleSystem
 
 
@@ -132,12 +133,35 @@ class EnergyAnalyzerTests(unittest.TestCase):
         self.assertFalse(repeated.onset)
 
 
+class VisualStyleTests(unittest.TestCase):
+    def test_has_three_named_styles(self) -> None:
+        self.assertGreaterEqual(len(VISUAL_STYLES), 3)
+        self.assertEqual(style_by_name("ember").name, "ember")
+
+    def test_style_shapes_audio_features(self) -> None:
+        features = AudioFeatures(bass=0.6, broadband=0.5, onset=True, intensity=0.7)
+        voltage = style_by_name("voltage")
+        shaped = voltage.shape_features(features)
+
+        self.assertTrue(shaped.onset)
+        self.assertGreaterEqual(shaped.bass, features.bass)
+        self.assertGreaterEqual(shaped.intensity, features.intensity)
+
+
 class AppSmokeTests(unittest.IsolatedAsyncioTestCase):
     async def test_textual_app_mounts_headlessly(self) -> None:
         app = ReactBeatApp()
         async with app.run_test(size=(60, 20)) as pilot:
             await pilot.pause(0.1)
             self.assertIsNotNone(app.simulation)
+
+    async def test_style_can_cycle_without_restarting_app(self) -> None:
+        app = ReactBeatApp()
+        async with app.run_test(size=(60, 20)) as pilot:
+            before = app.simulation.style.name
+            await pilot.press("s")
+            after = app.simulation.style.name
+            self.assertNotEqual(before, after)
 
 
 if __name__ == "__main__":

@@ -110,7 +110,13 @@ class ParticleSystem:
         ).astype(np.float32)
         self.alive[indices] = True
 
-    def rasterize(self, width: int, height: int) -> tuple[np.ndarray, np.ndarray]:
+    def rasterize(
+        self,
+        width: int,
+        height: int,
+        *,
+        threshold: float = 0.11,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Return boolean and intensity canvases sized in braille pixels."""
 
         width = max(2, int(width))
@@ -119,7 +125,7 @@ class ParticleSystem:
 
         active = self.alive
         if not np.any(active):
-            return intensity > 0.05, intensity
+            return intensity > threshold, intensity
 
         pos = self.position[active]
         age = self.age[active]
@@ -131,7 +137,7 @@ class ParticleSystem:
 
         valid = (x >= 0) & (x < width) & (y >= 0) & (y < height)
         if not np.any(valid):
-            return intensity > 0.05, intensity
+            return intensity > threshold, intensity
 
         fade = np.clip(1.0 - age[valid] / lifetime[valid], 0.0, 1.0)
         values = np.clip(particle_energy[valid] * (0.25 + fade), 0.0, 1.0)
@@ -145,7 +151,7 @@ class ParticleSystem:
         self._splat(intensity, xv, yv + 1, values * 0.30)
 
         np.clip(intensity, 0.0, 1.0, out=intensity)
-        return intensity > 0.11, intensity
+        return intensity > threshold, intensity
 
     @staticmethod
     def _splat(
