@@ -6,7 +6,7 @@ This project is being built for Hack Club TerminalCraft YSWS with a strict self-
 
 ## Current Status
 
-Phase 5 is complete. The app runs the particle/braille renderer without audio, decodes and plays WAV/FLAC/OGG files locally, tracks callback playback position, uses a manual short-time FFT analyzer to drive simulation energy and onset bursts, supports runtime visual style switching, and includes an alternate Stable Fluids-style mode. See [ROADMAP.md](ROADMAP.md) for the active phase checklist.
+Phase 6 is complete. The app runs the particle/braille renderer without audio, decodes and plays WAV/FLAC/OGG files locally, tracks callback playback position, uses a manual short-time FFT analyzer to drive simulation energy and onset bursts, supports runtime visual style switching, includes an alternate Stable Fluids-style mode, and has a validated one-file Linux PyInstaller build. See [ROADMAP.md](ROADMAP.md) for the phase checklist.
 
 ## Planned Features
 
@@ -56,6 +56,18 @@ During development:
 python -m src.cli path/to/audio.wav
 ```
 
+Check bundled runtime libraries:
+
+```bash
+python -m src.cli --diagnostics
+```
+
+Decode an audio file without starting playback:
+
+```bash
+python -m src.cli path/to/audio.wav --check-audio
+```
+
 Choose an initial style:
 
 ```bash
@@ -85,10 +97,24 @@ Controls will grow by phase. The intended baseline is:
 
 ## Packaging Goal
 
-The final release target is a single Linux binary built with PyInstaller one-file mode:
+The final release target is a single Linux binary built with PyInstaller one-file mode. From a machine with Docker:
 
 ```bash
-pyinstaller --onefile --name reactbeat src/cli.py
+bash packaging/linux/build.sh
 ```
 
-Packaging is its own phase because audio dependencies commonly need explicit validation on a clean Linux image.
+The generated binary is written to:
+
+```bash
+dist/linux/reactbeat
+```
+
+The Docker build validates the frozen binary in a clean `debian:bookworm-slim` stage by running:
+
+```bash
+reactbeat --smoke-test --mode particles
+reactbeat --smoke-test --mode fluid --style aurora
+reactbeat --diagnostics
+```
+
+The PyInstaller spec bundles PortAudio, libsndfile support, and ALSA configuration data so `sounddevice` and `soundfile` load without a Python install or package install on the target machine.

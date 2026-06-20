@@ -12,6 +12,5 @@ env/
 build/
 dist/
 *.egg-info/
-*.spec
 .coverage
 htmlcov/

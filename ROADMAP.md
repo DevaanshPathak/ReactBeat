@@ -79,8 +79,10 @@ Phase 5 note: fluid mode uses a coarse density/velocity grid with diffuse, advec
 
 Goal: produce a one-file Linux binary that works in a clean environment.
 
-- [ ] Add PyInstaller build config or command docs.
-- [ ] Build one-file `reactbeat` Linux binary.
-- [ ] Validate in a clean Linux VM/container.
-- [ ] Document install/run instructions and known limitations.
-- [ ] Commit packaging work.
+- [x] Add PyInstaller build config or command docs.
+- [x] Build one-file `reactbeat` Linux binary.
+- [x] Validate in a clean Linux VM/container.
+- [x] Document install/run instructions and known limitations.
+- [x] Commit packaging work.
+
+Phase 6 note: `reactbeat.spec` builds a one-file Linux binary through Docker. Validation passed in `debian:bookworm-slim` for particle smoke render, fluid smoke render, and bundled runtime diagnostics. The generated artifact is `dist/linux/reactbeat`.

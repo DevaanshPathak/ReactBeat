@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -25,6 +26,34 @@ def write_unicode_line(value: str) -> None:
             sys.stdout.write(output.encode("unicode_escape").decode("ascii"))
 
 
+def package_version(module: object, distribution: str) -> str:
+    version = getattr(module, "__version__", None)
+    if version:
+        return str(version)
+    try:
+        return importlib.metadata.version(distribution)
+    except importlib.metadata.PackageNotFoundError:
+        return "unknown"
+
+
+def print_diagnostics() -> int:
+    try:
+        import sounddevice as sd
+        import soundfile as sf
+    except ImportError as exc:
+        sys.stderr.write(f"reactbeat: missing runtime dependency: {exc}\n")
+        return 2
+
+    sys.stdout.write(f"soundfile={package_version(sf, 'soundfile')}\n")
+    sys.stdout.write(f"sounddevice={package_version(sd, 'sounddevice')}\n")
+    try:
+        version, version_text = sd.get_portaudio_version()
+        sys.stdout.write(f"portaudio={version} {version_text}\n")
+    except Exception as exc:
+        sys.stdout.write(f"portaudio=unavailable ({exc})\n")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="reactbeat",
@@ -40,6 +69,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--smoke-test",
         action="store_true",
         help="Render one deterministic braille frame and exit.",
+    )
+    parser.add_argument(
+        "--diagnostics",
+        action="store_true",
+        help="Check bundled audio/runtime libraries and exit.",
+    )
+    parser.add_argument(
+        "--check-audio",
+        action="store_true",
+        help="Decode the provided audio file and print metadata without playback.",
     )
     parser.add_argument(
         "--style",
@@ -81,6 +120,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_unicode_line(frame.plain)
         return 0
 
+    if args.diagnostics:
+        return print_diagnostics()
+
     audio = None
     player = None
     if args.audiofile is not None:
@@ -90,6 +132,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         except AudioLoadError as exc:
             sys.stderr.write(f"reactbeat: {exc}\n")
             return 2
+
+    if args.check_audio:
+        if audio is None:
+            sys.stderr.write("reactbeat: --check-audio requires an audiofile\n")
+            return 2
+        sys.stdout.write(
+            "audio: "
+            f"frames={audio.frames} "
+            f"channels={audio.channels} "
+            f"sample_rate={audio.sample_rate} "
+            f"duration={audio.duration_seconds:.3f}s\n"
+        )
+        return 0
 
     ReactBeatApp(
         audio=audio,
