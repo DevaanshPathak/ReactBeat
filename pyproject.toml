@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reactbeat"
+version = "0.1.0"
+description = "Beat-reactive generative terminal art rendered with braille graphics."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "rich>=13.7",
+    "textual>=0.86",
+    "soundfile>=0.12",
+    "sounddevice>=0.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pyinstaller>=6.0",
+]
+
+[project.scripts]
+reactbeat = "src.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["src*"]

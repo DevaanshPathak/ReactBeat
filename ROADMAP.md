@@ -13,14 +13,16 @@ Each phase should end with a runnable app and a commit. The command `python -m s
 
 Goal: prove the rendering pipeline end to end without audio.
 
-- [ ] Create package structure.
-- [ ] Add project metadata and dependencies.
-- [ ] Implement custom braille packer.
-- [ ] Implement numpy-vectorized particle simulation.
-- [ ] Implement Textual app and simulation widget at 30 FPS.
-- [ ] Add CLI entry point.
-- [ ] Verify `python -m src.cli` runs.
-- [ ] Commit Phase 1.
+- [x] Create package structure.
+- [x] Add project metadata and dependencies.
+- [x] Implement custom braille packer.
+- [x] Implement numpy-vectorized particle simulation.
+- [x] Implement Textual app and simulation widget at 30 FPS.
+- [x] Add CLI entry point.
+- [x] Verify `python -m src.cli` runs.
+- [x] Commit Phase 1.
+
+Phase 1 note: `python -m src.cli` launches the Textual particle renderer, and `python -m src.cli --smoke-test` renders one deterministic braille frame for non-interactive verification. Audio arguments are parsed but intentionally unused until Phase 2.
 
 ## Phase 2: Audio Decode and Playback Sync
 

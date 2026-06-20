@@ -1,0 +1,94 @@
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import Any
+
+import numpy as np
+from rich.text import Text
+
+
+BRAILLE_BASE = 0x2800
+
+# Standard Unicode braille dot bit layout for a 2 by 4 cell.
+BRAILLE_BITS = np.array(
+    [
+        [0x01, 0x08],
+        [0x02, 0x10],
+        [0x04, 0x20],
+        [0x40, 0x80],
+    ],
+    dtype=np.uint8,
+)
+
+
+def pack_braille(canvas: np.ndarray) -> list[str]:
+    """Pack a 2D boolean pixel canvas into braille text lines."""
+
+    bool_canvas = _as_bool_canvas(canvas)
+    padded = _pad_canvas(bool_canvas)
+    cell_rows = padded.shape[0] // 4
+    cell_cols = padded.shape[1] // 2
+
+    cells = padded.reshape(cell_rows, 4, cell_cols, 2).transpose(0, 2, 1, 3)
+    bit_values = (cells * BRAILLE_BITS).sum(axis=(2, 3)).astype(np.uint8)
+
+    return [
+        "".join(chr(BRAILLE_BASE + int(value)) for value in row)
+        for row in bit_values
+    ]
+
+
+def braille_canvas_to_text(
+    canvas: np.ndarray,
+    cell_styles: np.ndarray | Sequence[Sequence[str | None]] | None = None,
+    *,
+    default_style: str | None = None,
+) -> Text:
+    """Pack a boolean canvas into Rich Text with optional per-cell styles."""
+
+    lines = pack_braille(canvas)
+    text = Text()
+
+    if cell_styles is None:
+        for row_index, line in enumerate(lines):
+            if row_index:
+                text.append("\n")
+            text.append(line, style=default_style)
+        return text
+
+    style_grid = np.asarray(cell_styles, dtype=object)
+    for row_index, line in enumerate(lines):
+        if row_index:
+            text.append("\n")
+        for col_index, char in enumerate(line):
+            style = _style_at(style_grid, row_index, col_index, default_style)
+            text.append(char, style=style)
+    return text
+
+
+def _as_bool_canvas(canvas: np.ndarray) -> np.ndarray:
+    array = np.asarray(canvas)
+    if array.ndim != 2:
+        msg = f"braille canvas must be 2D, got shape {array.shape!r}"
+        raise ValueError(msg)
+    return array.astype(bool, copy=False)
+
+
+def _pad_canvas(canvas: np.ndarray) -> np.ndarray:
+    row_pad = (-canvas.shape[0]) % 4
+    col_pad = (-canvas.shape[1]) % 2
+    if row_pad == 0 and col_pad == 0:
+        return canvas
+    return np.pad(canvas, ((0, row_pad), (0, col_pad)), mode="constant")
+
+
+def _style_at(
+    style_grid: np.ndarray,
+    row: int,
+    col: int,
+    fallback: str | None,
+) -> Any:
+    if row >= style_grid.shape[0] or col >= style_grid.shape[1]:
+        return fallback
+    style = style_grid[row, col]
+    return fallback if style is None else style
