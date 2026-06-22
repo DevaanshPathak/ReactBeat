@@ -29,6 +29,7 @@ COPY --from=build /app/dist/reactbeat /usr/local/bin/reactbeat
 
 RUN /usr/local/bin/reactbeat --smoke-test --mode particles --width 18 --height 6 >/tmp/particles.txt
 RUN /usr/local/bin/reactbeat --smoke-test --mode fluid --style aurora --width 18 --height 6 >/tmp/fluid.txt
+RUN /usr/local/bin/reactbeat --smoke-test --mode waves --style prism --width 18 --height 6 >/tmp/waves.txt
 RUN /usr/local/bin/reactbeat --diagnostics >/tmp/diagnostics.txt
 
 FROM scratch AS artifact

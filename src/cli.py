@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
+from . import __version__
 from .audio.loader import AudioLoadError, load_audio_file
 from .audio.player import AudioPlayer
 from .app import ReactBeatApp, mode_names, render_smoke_frame
@@ -79,6 +80,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--check-audio",
         action="store_true", # Restrict style choices to the registered visual styles
         help="Decode the provided audio file and print metadata without playback.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"reactbeat {__version__}",
     )
     parser.add_argument(
         "--style",
