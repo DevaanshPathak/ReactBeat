@@ -14,3 +14,4 @@ dist/
 *.egg-info/
 .coverage
 htmlcov/
+test.wav

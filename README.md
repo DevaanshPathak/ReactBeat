@@ -1,38 +1,35 @@
 # reactbeat
 
-`reactbeat` is a terminal music visualizer that renders beat-reactive generative art with real simulation state instead of spectrum bars. It decodes local audio, plays it back, analyzes short-time energy in sync with playback, and draws particles or fluid-like motion as packed braille graphics in a Textual TUI.
+`reactbeat` is a local terminal music visualizer. It decodes an audio file, plays it back, analyzes short-time energy in sync with playback, and renders particle, fluid, or wave motion as packed braille graphics in a Textual TUI.
 
-This project is being built for Hack Club TerminalCraft YSWS with a strict self-contained local runtime goal: no network APIs, no subprocess wrappers around external media tools, and no dependency on an installed Python runtime in the final Linux binary.
+The visual core is simulation-driven generative art, not FFT bars. Audio, analysis, simulation, and rendering all run locally.
 
-## Current Status
+## Features
 
-Phase 6 is complete. The app runs the particle/braille renderer without audio, decodes and plays WAV/FLAC/OGG files locally, tracks callback playback position, uses a manual short-time FFT analyzer to drive simulation energy and onset bursts, supports runtime visual style switching, includes an alternate Stable Fluids-style mode, and has a validated one-file Linux PyInstaller build. See [ROADMAP.md](ROADMAP.md) for the phase checklist.
-
-## Planned Features
-
-- Textual app with a custom simulation widget running at 30 FPS.
-- Custom braille renderer that packs a boolean pixel canvas into Unicode braille cells.
-- Numpy-vectorized particle simulation with audio-reactive spawning and force injection.
-- Local audio decode with `soundfile` for WAV, FLAC, and OGG.
-- Callback-driven playback with `sounddevice`, exposing live playback sample position.
-- Manual short-time energy analysis using `numpy.fft`, with adaptive onset detection.
-- Switchable visual styles while playback continues.
-- Stretch goal: Stable Fluids solver as an alternate simulation mode.
-- PyInstaller one-file Linux build validated in a clean Linux environment.
+- TUI start screen with Browse and Recent Files choices.
+- Folder browser filtered to supported audio files.
+- Persistent recent-file list for reopening previously selected tracks.
+- Custom braille renderer using Unicode braille cells and Rich styles.
+- Numpy-vectorized particle simulation.
+- Stable Fluids-style density/velocity simulation.
+- Damped wave/ripple simulation.
+- Local WAV, FLAC, and OGG decode through `soundfile`.
+- Callback-driven playback through `sounddevice`.
+- Manual FFT energy analyzer with adaptive onset detection.
+- Runtime visual styles: `ember`, `aurora`, `voltage`, `prism`, `ghost`.
+- One-file Linux PyInstaller build with bundled PortAudio and ALSA config.
 
 ## Supported Audio
-
-Initial supported formats are the formats handled by libsndfile through `soundfile`, especially:
 
 - WAV
 - FLAC
 - OGG/Vorbis
 
-MP3 is intentionally out of scope for the first version because common Python MP3 workflows rely on `ffmpeg` subprocesses, which violates the self-contained rule.
+MP3 is intentionally not supported because common Python MP3 paths use `ffmpeg` subprocesses, which would break the self-contained runtime goal.
 
 ## Development Setup
 
-Use Python 3.11+ during development.
+Use Python 3.11+.
 
 ```bash
 python -m venv .venv
@@ -48,56 +45,71 @@ python -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
-## Running
+## Run
 
-During development:
-
-```bash
-python -m src.cli path/to/audio.wav
-```
-
-Check bundled runtime libraries:
-
-```bash
-python -m src.cli --diagnostics
-```
-
-Decode an audio file without starting playback:
-
-```bash
-python -m src.cli path/to/audio.wav --check-audio
-```
-
-Choose an initial style:
-
-```bash
-python -m src.cli path/to/audio.wav --style aurora
-```
-
-Start in fluid mode:
-
-```bash
-python -m src.cli path/to/audio.wav --mode fluid
-```
-
-Running without audio remains supported for development:
+Open the TUI start screen:
 
 ```bash
 python -m src.cli
 ```
 
+From there, choose Browse to navigate folders or Recent Files to reopen a previously selected track.
+
+Open the picker at a specific folder:
+
+```bash
+python -m src.cli C:\Users\you\Music
+```
+
+Start directly with an audio file:
+
+```bash
+python -m src.cli path/to/audio.wav
+```
+
+Choose initial mode or style:
+
+```bash
+python -m src.cli path/to/audio.wav --mode waves --style prism
+```
+
 ## Controls
 
-Controls will grow by phase. The intended baseline is:
-
+- `Enter`: choose the highlighted menu item, folder, or audio file
+- `b`: browse folders
+- `r`: open recent files
+- `h`: return to the start screen
+- `u` / `Backspace`: move the picker root to the parent folder
 - `q`: quit
-- `space`: pause/resume simulation or playback
-- `s`: cycle render style (`ember`, `aurora`, `voltage`)
-- `m`: cycle simulation mode (`particles`, `fluid`)
+- `space`: pause/resume visualization and playback
+- `s`: cycle style
+- `m`: cycle simulation mode
 
-## Packaging Goal
+The visualizer also shows these controls in a status bar above the animation.
 
-The final release target is a single Linux binary built with PyInstaller one-file mode. From a machine with Docker:
+## Test
+
+Run the cross-platform local check suite:
+
+```bash
+python -m scripts.check
+```
+
+That command runs unit tests, particle/fluid smoke renders, runtime diagnostics, and WAV decode validation. It works on Windows as well as Linux/macOS development environments.
+
+Useful individual checks:
+
+```bash
+python -m src.cli --diagnostics
+python -m src.cli --smoke-test --mode particles
+python -m src.cli --smoke-test --mode fluid --style aurora
+python -m src.cli --smoke-test --mode waves --style prism
+python -m src.cli path/to/audio.wav --check-audio
+```
+
+## Linux Binary
+
+From a machine with Docker:
 
 ```bash
 bash packaging/linux/build.sh
@@ -109,12 +121,4 @@ The generated binary is written to:
 dist/linux/reactbeat
 ```
 
-The Docker build validates the frozen binary in a clean `debian:bookworm-slim` stage by running:
-
-```bash
-reactbeat --smoke-test --mode particles
-reactbeat --smoke-test --mode fluid --style aurora
-reactbeat --diagnostics
-```
-
-The PyInstaller spec bundles PortAudio, libsndfile support, and ALSA configuration data so `sounddevice` and `soundfile` load without a Python install or package install on the target machine.
+The Docker build validates the frozen binary in a clean `debian:bookworm-slim` stage by running particle smoke render, fluid smoke render, and bundled runtime diagnostics.

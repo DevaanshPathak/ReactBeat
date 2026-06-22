@@ -12,7 +12,7 @@ Terminal users and TerminalCraft judges who want a self-contained, visually expr
 
 - Load and play local audio files fully offline.
 - Keep visual state synchronized to audio playback position.
-- Render a particle simulation in braille characters at about 30 FPS.
+- Render particle, fluid, and wave simulations in braille characters at about 30 FPS.
 - Detect energy and beats with a lightweight manual analyzer.
 - Provide multiple visual styles without restarting playback.
 - Package a Linux one-file binary that works without a local Python install.
@@ -37,6 +37,10 @@ Terminal users and TerminalCraft judges who want a self-contained, visually expr
 ### TUI
 
 - Use Textual and Rich.
+- Open a start screen when no audio file is supplied.
+- Let users choose between browsing folders and reopening recent files.
+- Filter the picker to supported audio files while still allowing folder traversal.
+- Show core controls inside the TUI, not only in CLI documentation.
 - Implement a custom `Widget` subclass for the simulation surface.
 - Drive animation with `self.set_interval(1 / 30, self.tick)`.
 - Return `rich.text.Text` from `render()`.
@@ -68,11 +72,17 @@ Terminal users and TerminalCraft judges who want a self-contained, visually expr
 - Use energy/onsets to inject particles and forces.
 - Keep simulation logic independent of Textual rendering.
 
-### Fluid Simulation Stretch
+### Fluid Simulation
 
 - Implement a coarse-grid Stable Fluids-style solver.
 - Include advection, diffusion, projection, and source injection.
 - Make fluid mode selectable through the same app pipeline.
+
+### Wave Simulation
+
+- Implement a damped 2D wave/ripple solver.
+- Use audio energy and onsets to inject drops and line ripples.
+- Make wave mode selectable through the same app pipeline.
 
 ### Braille Rendering
 
@@ -82,7 +92,7 @@ Terminal users and TerminalCraft judges who want a self-contained, visually expr
 
 ### Styles
 
-- Provide at least 2 to 3 distinct visual styles.
+- Provide at least 5 distinct visual styles.
 - Allow style switching at runtime.
 - Keep style code separate from simulation code.
 
@@ -96,16 +106,7 @@ Terminal users and TerminalCraft judges who want a self-contained, visually expr
 
 - The app should run at about 30 FPS on a typical terminal size.
 - The code should keep UI, audio, analysis, simulation, and rendering separated.
-- Each phase must end in a runnable state.
-- Commits should mark phase boundaries.
+- The app should be runnable either with a direct audio path or by selecting a file in the TUI.
+- A single cross-platform command should verify the local development build.
 - Errors should be visible and actionable from the CLI.
-
-## Milestones
-
-1. Documentation baseline.
-2. Particle mode and braille renderer without audio.
-3. Audio decode and playback position sync.
-4. Beat/energy analysis and particle reactivity.
-5. Runtime style switching.
-6. Fluid mode stretch.
-7. Linux PyInstaller package and validation.
+- Baseline motion should read as coherent flow rather than pure random scatter.
